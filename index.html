@@ -1,0 +1,642 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 KBO 승부예측 시뮬레이션 게임</title>
+    <style>
+        :root {
+            --primary: #071d49;
+            --secondary: #1e3a8a;
+            --accent: #e11d48;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            background: #f1f5f9;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .my-team-display {
+            color: var(--secondary);
+        }
+
+        .points-display {
+            color: var(--accent);
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        /* 팀 선택 스타일 */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .team-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+
+        .team-btn {
+            background: #fff;
+            border: 2px solid var(--border);
+            padding: 15px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .team-btn:hover {
+            border-color: var(--secondary);
+            background: #eff6ff;
+        }
+
+        .team-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* 매치 서식 */
+        .match-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .match-title {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .match-teams {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .predict-btn {
+            flex: 1;
+            padding: 15px 10px;
+            border: 2px solid var(--border);
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .predict-btn sub {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: normal;
+        }
+
+        .predict-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .predict-btn.selected {
+            background: #e0f2fe;
+            border-color: #0284c7;
+            color: #0369a1;
+        }
+
+        .vs-text {
+            font-weight: bold;
+            color: #94a3b8;
+            padding: 0 10px;
+        }
+
+        /* 배팅 영역 */
+        .betting-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .betting-section label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .bet-input-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 150px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .btn-max {
+            padding: 10px 15px;
+            background: #64748b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* 공통 버튼 */
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--secondary);
+        }
+
+        /* 결과 화면 디자인 */
+        .result-match {
+            border-left: 6px solid #cbd5e1;
+            padding-left: 15px;
+        }
+        .result-match.success {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        .result-match.fail {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .result-meta {
+            margin-top: 8px;
+            font-size: 14px;
+            display: flex;
+            gap: 15px;
+        }
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .badge.user { background: #3b82f6; }
+        .badge.ai { background: #a855f7; }
+
+        .summary-card {
+            background: #f8fafc;
+            border: 2px dashed var(--border);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+            text-align: center;
+        }
+
+        .payout-highlight {
+            font-size: 22px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .payout-plus { color: #22c55e; }
+        .payout-minus { color: #ef4444; }
+        
+        .bonus-text {
+            color: #22c55e;
+            font-size: 14px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>⚾ 2026 KBO 승부예측 시뮬레이터</h1>
+        <p>전반기 실제 데이터 기반 확률 시뮬레이션 게임</p>
+    </header>
+
+    <div class="status-bar">
+        <div>마이 팀: <span id="statusBarTeam" class="my-team-display">선택 안 됨</span></div>
+        <div>보유 포인트: <span id="statusBarPoints" class="points-display">500 FP</span></div>
+    </div>
+
+    <!-- STEP 1: 팀 선택 -->
+    <div id="step1" class="step active">
+        <h2>1. 응원하는 나의 구단을 골라주세요</h2>
+        <div class="team-grid" id="teamGrid"></div>
+        <button class="action-btn" id="btnGoToStep2" disabled style="background:#cbd5e1; cursor:not-allowed;">구단을 먼저 선택해주세요</button>
+    </div>
+
+    <!-- STEP 2: 예측 및 배팅 -->
+    <div id="step2" class="step">
+        <h2>2. 오늘의 5개 매치 승리팀 예측 및 배팅</h2>
+        <p style="color:#64748b; margin-bottom:20px; font-size:14px;">※ 각 매치에서 승리할 것 같은 팀을 클릭하고, 하단에 포인트를 배팅하세요.</p>
+        
+        <div id="matchesContainer"></div>
+
+        <div class="betting-section">
+            <label for="betAmount">배팅할 포인트를 입력하세요</label>
+            <div class="bet-input-container">
+                <input type="number" id="betAmount" min="1" value="100">
+                <button class="btn-max" id="btnMaxBet">MAX</button>
+            </div>
+            <button class="action-btn" id="btnSimulate">승부예측 결과 시뮬레이션 시작</button>
+        </div>
+    </div>
+
+    <!-- STEP 3: 결과 출력 -->
+    <div id="step3" class="step">
+        <h2>3. 경기 예측 시뮬레이션 결과</h2>
+        
+        <div id="resultsContainer"></div>
+
+        <div class="summary-card">
+            <h3>최종 시뮬레이션 정산</h3>
+            <p style="margin-top:10px;" id="resultHitCount"></p>
+            <p id="resultBonusInfo" class="bonus-text"></p>
+            <div class="payout-highlight" id="resultPayout"></div>
+        </div>
+
+        <button class="action-btn" id="btnRestart">다음 라운드 진행하기</button>
+    </div>
+</div>
+
+<script>
+// 전반기 상대 전적 승률 데이터 데이터베이스화[cite: 1]
+const winRates = {
+    "삼성 라이온즈": {
+        "LG 트윈스": 54.5, "kt wiz": 44.4, "KIA 타이거즈": 55.6, "두산 베어스": 66.7,
+        "한화 이글스": 55.6, "NC 다이노스": 55.6, "롯데 자이언츠": 40.0, "SSG 랜더스": 88.9, "키움 히어로즈": 76.9
+    },
+    "LG 트윈스": {
+        "삼성 라이온즈": 45.5, "kt wiz": 55.6, "KIA 타이거즈": 63.6, "두산 베어스": 55.6,
+        "한화 이글스": 50.0, "NC 다이노스": 66.7, "롯데 자이언츠": 55.6, "SSG 랜더스": 88.9, "키움 히어로즈": 66.7
+    },
+    "kt wiz": {
+        "삼성 라이온즈": 55.6, "LG 트윈스": 44.4, "KIA 타이거즈": 44.4, "두산 베어스": 66.7,
+        "한화 이글스": 50.0, "NC 다이노스": 55.6, "롯데 자이언츠": 62.5, "SSG 랜더스": 66.7, "키움 히어로즈": 66.7
+    },
+    "KIA 타이거즈": {
+        "삼성 라이온즈": 44.4, "LG 트윈스": 36.4, "kt wiz": 55.6, "두산 베어스": 41.7,
+        "한화 이글스": 50.0, "NC 다이노스": 55.6, "롯데 자이언츠": 37.5, "SSG 랜더스": 66.7, "키움 히어로즈": 100.0
+    },
+    "두산 베어스": {
+        "삼성 라이온즈": 33.3, "LG 트윈스": 44.4, "kt wiz": 33.3, "KIA 타이거즈": 58.3,
+        "한화 이글스": 55.6, "NC 다이노스": 50.0, "롯데 자이언츠": 66.7, "SSG 랜더스": 55.6, "키움 히어로즈": 63.6
+    },
+    "한화 이글스": {
+        "삼성 라이온즈": 44.4, "LG 트윈스": 50.0, "kt wiz": 50.0, "KIA 타이거즈": 50.0,
+        "두산 베어스": 44.4, "NC 다이노스": 55.6, "롯데 자이언츠": 62.5, "SSG 랜더스": 41.7, "키움 히어로즈": 54.5
+    },
+    "NC 다이노스": {
+        "삼성 라이온즈": 44.4, "LG 트윈스": 33.3, "kt wiz": 44.4, "KIA 타이거즈": 44.4,
+        "두산 베어스": 50.0, "한화 이글스": 44.4, "롯데 자이언츠": 55.6, "SSG 랜더스": 66.7, "키움 히어로즈": 50.0
+    },
+    "롯데 자이언츠": {
+        "삼성 라이온즈": 60.0, "LG 트윈스": 44.4, "kt wiz": 37.5, "KIA 타이거즈": 62.5,
+        "두산 베어스": 33.3, "한화 이글스": 37.5, "NC 다이노스": 44.4, "SSG 랜더스": 60.0, "키움 히어로즈": 58.3
+    },
+    "SSG 랜더스": {
+        "삼성 라이온즈": 11.1, "LG 트윈스": 11.1, "kt wiz": 33.3, "KIA 타이거즈": 33.3,
+        "두산 베어스": 44.4, "한화 이글스": 58.3, "NC 다이노스": 33.3, "롯데 자이언츠": 40.0, "키움 히어로즈": 50.0
+    },
+    "키움 히어로즈": {
+        "삼성 라이온즈": 23.1, "LG 트윈스": 33.3, "kt wiz": 33.3, "KIA 타이거즈": 0.0,
+        "두산 베어스": 36.4, "한화 이글스": 45.5, "NC 다이노스": 50.0, "롯데 자이언츠": 41.7, "SSG 랜더스": 50.0
+    }
+};
+
+const teams = Object.keys(winRates);
+
+// 게임 상태 관리 변수[cite: 1]
+let userTeam = "";
+let userPoints = 500;
+let currentMatches = [];
+let userPredictions = [];
+
+// DOM 요소
+const teamGrid = document.getElementById('teamGrid');
+const btnGoToStep2 = document.getElementById('btnGoToStep2');
+const statusBarTeam = document.getElementById('statusBarTeam');
+const statusBarPoints = document.getElementById('statusBarPoints');
+const matchesContainer = document.getElementById('matchesContainer');
+const betAmountInput = document.getElementById('betAmount');
+const btnMaxBet = document.getElementById('btnMaxBet');
+const btnSimulate = document.getElementById('btnSimulate');
+const resultsContainer = document.getElementById('resultsContainer');
+const resultHitCount = document.getElementById('resultHitCount');
+const resultBonusInfo = document.getElementById('resultBonusInfo');
+const resultPayout = document.getElementById('resultPayout');
+
+// 초기화: 팀 선택 그리드 생성
+function initTeamSelection() {
+    teamGrid.innerHTML = "";
+    teams.forEach(team => {
+        const btn = document.createElement('button');
+        btn.className = 'team-btn';
+        btn.textContent = team;
+        btn.onclick = () => selectTeam(team, btn);
+        teamGrid.appendChild(btn);
+    });
+}
+
+function selectTeam(team, element) {
+    document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('selected'));
+    element.classList.add('selected');
+    userTeam = team;
+    statusBarTeam.textContent = team;
+    
+    btnGoToStep2.disabled = false;
+    btnGoToStep2.style.background = "var(--primary)";
+    btnGoToStep2.style.cursor = "pointer";
+    btnGoToStep2.textContent = `${team} 선택 완료 - 대진 생성하기`;
+}
+
+// 스텝 전환 함수
+function showStep(stepNum) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(`step${stepNum}`).classList.add('active');
+    window.scrollTo(0, 0);
+}
+
+// 10개 팀 랜덤 대진 생성 (중복 없이 5개 조 구성)[cite: 1]
+function generateMatches() {
+    let pool = [...teams];
+    for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    
+    currentMatches = [];
+    userPredictions = new Array(5).fill(null);
+    
+    for (let i = 0; i < 5; i++) {
+        const teamA = pool[i * 2];
+        const teamB = pool[i * 2 + 1];
+        
+        let rateA = winRates[teamA][teamB];
+        let rateB = winRates[teamB][teamA];
+        
+        currentMatches.push({ teamA, teamB, rateA, rateB });
+    }
+    
+    renderMatches();
+}
+
+// 대진 카드 렌더링
+function renderMatches() {
+    matchesContainer.innerHTML = "";
+    currentMatches.forEach((match, index) => {
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        
+        card.innerHTML = `
+            <div class="match-title">MATCH 0${index + 1}</div>
+            <div class="match-teams">
+                <button class="predict-btn" id="match-${index}-0" onclick="selectPrediction(${index}, 0)">
+                    <span>${match.teamA}</span>
+                    <sub>승률 ${match.rateA}%</sub>
+                </button>
+                <span class="vs-text">VS</span>
+                <button class="predict-btn" id="match-${index}-1" onclick="selectPrediction(${index}, 1)">
+                    <span>${match.teamB}</span>
+                    <sub>승률 ${match.rateB}%</sub>
+                </button>
+            </div>
+        `;
+        matchesContainer.appendChild(card);
+    });
+}
+
+function selectPrediction(matchIndex, teamIndex) {
+    userPredictions[matchIndex] = teamIndex;
+    document.getElementById(`match-${matchIndex}-0`).classList.remove('selected');
+    document.getElementById(`match-${matchIndex}-1`).classList.remove('selected');
+    document.getElementById(`match-${matchIndex}-${teamIndex}`).classList.add('selected');
+}
+
+btnGoToStep2.onclick = () => {
+    generateMatches();
+    showStep(2);
+};
+
+btnMaxBet.onclick = () => {
+    betAmountInput.value = userPoints;
+};
+
+btnSimulate.onclick = () => {
+    if (userPredictions.includes(null)) {
+        alert("모든 5개 매치의 우승팀을 예측해주세요!");
+        return;
+    }
+    
+    const betAmount = parseInt(betAmountInput.value);
+    if (isNaN(betAmount) || betAmount <= 0) {
+        alert("올바른 배팅 금액을 입력해주세요.");
+        return;
+    }
+    if (betAmount > userPoints) {
+        alert("보유하고 있는 포인트보다 많이 배팅할 수 없습니다!");
+        return;
+    }
+
+    runSimulation(betAmount);
+};
+
+// AI 시뮬레이션 및 결과 정산[cite: 1]
+function runSimulation(betAmount) {
+    resultsContainer.innerHTML = "";
+    let matchHits = 0;
+    let myTeamWon = false; // 응원팀 승리 여부 플래그
+    let myTeamPlayed = false; // 응원팀이 대진에 있었는지 여부
+    
+    currentMatches.forEach((match, index) => {
+        const rand = Math.random() * 100;
+        let winnerIndex = rand <= match.rateA ? 0 : 1;
+        let winnerTeam = winnerIndex === 0 ? match.teamA : match.teamB;
+        
+        let userPickedTeam = userPredictions[index] === 0 ? match.teamA : match.teamB;
+        let isHit = userPredictions[index] === winnerIndex;
+        
+        if (isHit) matchHits++;
+        
+        // 내 응원팀 경기 결과 감지
+        if (match.teamA === userTeam || match.teamB === userTeam) {
+            myTeamPlayed = true;
+            if (winnerTeam === userTeam) {
+                myTeamWon = true;
+            }
+        }
+        
+        const resCard = document.createElement('div');
+        resCard.className = `match-card result-match ${isHit ? 'success' : 'fail'}`;
+        resCard.innerHTML = `
+            <div class="match-title">MATCH 0${index + 1} 결과</div>
+            <div style="font-size: 18px; font-weight: bold; display:flex; justify-content:space-between;">
+                <span>${match.teamA} VS ${match.teamB}</span>
+                <span style="color: ${isHit ? '#22c55e' : '#ef4444'}">${isHit ? '🎯 예측 성공' : '❌ 예측 실패'}</span>
+            </div>
+            <div class="result-meta">
+                <div><span class="badge user">내 선택</span> ${userPickedTeam}</div>
+                <div><span class="badge ai">실제 승리팀</span> <strong>${winnerTeam}</strong> (확률: ${winnerIndex === 0 ? match.rateA : match.rateB}%)</div>
+            </div>
+        `;
+        resultsContainer.appendChild(resCard);
+    });
+
+    // 기본 배팅금액 정산[cite: 1]
+    let hitPercent = (matchHits / 5) * 100;
+    let pointChange = 0;
+
+    switch(matchHits) {
+        case 0: pointChange = -betAmount * 2; break;
+        case 1: pointChange = -betAmount * 1; break;
+        case 2: pointChange = -betAmount * 0.5; break;
+        case 3: pointChange = betAmount * 0.5; break;
+        case 4: pointChange = betAmount * 1; break;
+        case 5: pointChange = betAmount * 2; break;
+    }
+
+    // 내 응원팀 승리 보너스 정산 (+100 포인트)
+    let bonusPoint = 0;
+    if (myTeamPlayed && myTeamWon) {
+        bonusPoint = 100;
+        resultBonusInfo.style.color = "#22c55e";
+        resultBonusInfo.textContent = `🎉 [보너스] 내가 응원하는 팀(${userTeam})이 경기에서 승리하여 +100 FP가 추가 지급됩니다!`;
+    } else if (myTeamPlayed && !myTeamWon) {
+        resultBonusInfo.style.color = "#ef4444";
+        resultBonusInfo.textContent = `😢 내가 응원하는 팀(${userTeam})이 아쉽게 패배하여 보너스를 받지 못했습니다.`;
+    } else {
+        resultBonusInfo.textContent = "";
+    }
+
+    // 최종 합산 계산
+    let totalChange = pointChange + bonusPoint;
+    userPoints += totalChange;
+    if (userPoints < 0) userPoints = 0;
+    
+    // UI 업데이트
+    statusBarPoints.textContent = `${userPoints} FP`;
+    resultHitCount.innerHTML = `총 5경기 중 <strong>${matchHits}경기</strong>를 맞췄습니다! (적중률 ${hitPercent}%)`;
+    
+    if (totalChange >= 0) {
+        resultPayout.innerHTML = `최종 결과: <span class="payout-plus">+${totalChange} FP 변동 (기본: ${pointChange >= 0 ? '+' : ''}${pointChange} / 보너스: +${bonusPoint})</span>`;
+    } else {
+        resultPayout.innerHTML = `최종 결과: <span class="payout-minus">${totalChange} FP 변동 (기본: ${pointChange} / 보너스: +${bonusPoint})</span>`;
+    }
+
+    if (userPoints <= 0) {
+        resultPayout.innerHTML += `<br><span style="font-size:14px; color:#ef4444; font-weight:normal;">포인트를 모두 잃었습니다. 다음 라운드 진행 시 기본 100 FP가 충전됩니다.</span>`;
+    }
+
+    showStep(3);
+}
+
+// 다시 시작 버튼 (다음 라운드 진행)
+document.getElementById('btnRestart').onclick = () => {
+    if (userPoints <= 0) {
+        userPoints = 100;
+        statusBarPoints.textContent = `${userPoints} FP`;
+    }
+    betAmountInput.value = Math.min(100, userPoints);
+    generateMatches();
+    showStep(2);
+};
+
+// 최초 실행
+initTeamSelection();
+</script>
+
+</body>
+</html>
