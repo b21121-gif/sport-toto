@@ -1,14 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 KBO 승부예측 시뮬레이션 게임</title>
+    <title>2026 프로스포츠(KBO/Kリーグ) 승부예측 시뮬레이션 게임</title>
     <style>
         :root {
-            --primary: #071d49;
-            --secondary: #1e3a8a;
-            --accent: #e11d48;
+            --primary: #1e3a8a; /* 기본 블루 */
+            --kbo-color: #0284c7;
+            --kleague-color: #047857;
+            --secondary: #0f172a;
+            --accent: #dc2626;
             --bg: #f8fafc;
             --card-bg: #ffffff;
             --text: #0f172a;
@@ -52,6 +54,7 @@
             color: var(--primary);
             font-size: 28px;
             margin-bottom: 10px;
+            transition: color 0.3s;
         }
 
         .status-bar {
@@ -81,6 +84,38 @@
             display: block;
         }
 
+        /* 리그 선택 버튼 디자인 */
+        .league-selection {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .league-btn {
+            flex: 1;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 3px solid var(--border);
+            background: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .league-btn#btnKBO.selected {
+            border-color: var(--kbo-color);
+            background: #f0f9ff;
+            color: var(--kbo-color);
+        }
+
+        .league-btn#btnKLeague.selected {
+            border-color: var(--kleague-color);
+            background: #f0fdf4;
+            color: var(--kleague-color);
+        }
+
         /* 팀 선택 스타일 */
         .team-grid {
             display: grid;
@@ -91,7 +126,7 @@
 
         @media (min-width: 768px) {
             .team-grid {
-                grid-template-columns: repeat(5, 1fr);
+                grid-template-columns: repeat(4, 1fr);
             }
         }
 
@@ -106,15 +141,53 @@
             transition: all 0.2s;
         }
 
-        .team-btn:hover {
+        .team-btn:hover:not(:disabled) {
             border-color: var(--secondary);
-            background: #eff6ff;
+            background: #f1f5f9;
         }
 
         .team-btn.selected {
             background: var(--primary);
             color: white;
             border-color: var(--primary);
+        }
+
+        .team-btn:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            border-color: #cbd5e1;
+        }
+
+        /* 매치 방식 선택 */
+        .mode-selection {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid var(--border);
+            background: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        .mode-btn.selected {
+            border-color: var(--primary);
+            background: #f8fafc;
+            color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary);
         }
 
         /* 매치 서식 */
@@ -142,26 +215,20 @@
             gap: 10px;
         }
 
-        .predict-btn {
+        .predict-btn, .setup-btn {
             flex: 1;
-            padding: 15px 10px;
+            padding: 18px 10px;
             border: 2px solid var(--border);
             background: #fff;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 15px;
+            font-size: 16px;
             transition: all 0.2s;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-        }
-
-        .predict-btn sub {
-            font-size: 11px;
-            color: #64748b;
-            font-weight: normal;
+            justify-content: center;
         }
 
         .predict-btn:hover {
@@ -238,17 +305,35 @@
             transition: background 0.2s;
         }
 
-        .action-btn:hover {
-            background: var(--secondary);
+        .action-btn:hover:not(:disabled) {
+            opacity: 0.9;
         }
 
-        /* 결과 화면 디자인 */
+        /* 수동 대진 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
         .result-match {
             border-left: 6px solid #cbd5e1;
             padding-left: 15px;
         }
         .result-match.success {
-            border-color: #22c55e;
+            border-color: #10b981;
             background: #f0fdf4;
         }
         .result-match.fail {
@@ -260,7 +345,8 @@
             margin-top: 8px;
             font-size: 14px;
             display: flex;
-            gap: 15px;
+            flex-direction: column;
+            gap: 5px;
         }
         .badge {
             padding: 2px 6px;
@@ -268,6 +354,8 @@
             font-size: 12px;
             font-weight: bold;
             color: white;
+            display: inline-block;
+            margin-right: 5px;
         }
         .badge.user { background: #3b82f6; }
         .badge.ai { background: #a855f7; }
@@ -287,11 +375,11 @@
             margin-top: 10px;
         }
         
-        .payout-plus { color: #22c55e; }
+        .payout-plus { color: #10b981; }
         .payout-minus { color: #ef4444; }
         
         .bonus-text {
-            color: #22c55e;
+            color: #10b981;
             font-size: 14px;
             margin-top: 5px;
             font-weight: bold;
@@ -302,37 +390,53 @@
 
 <div class="container">
     <header>
-        <h1>⚾ 2026 KBO 승부예측 시뮬레이터</h1>
-        <p>전반기 실제 데이터 기반 확률 시뮬레이션 게임</p>
+        <h1 id="mainTitle">⚾⚽ 2026 프로스포츠 승부예측 시뮬레이터</h1>
+        <p>KBO 리그와 K리그1 중 원하는 리그를 선택해 예측을 시도하세요.</p>
     </header>
 
     <div class="status-bar">
-        <div>마이 팀: <span id="statusBarTeam" class="my-team-display">선택 안 됨</span></div>
+        <div>선택 리그: <span id="statusBarLeague" style="color:var(--primary)">선택 안 됨</span> | 마이 팀: <span id="statusBarTeam" class="my-team-display">선택 안 됨</span></div>
         <div>보유 포인트: <span id="statusBarPoints" class="points-display">500 FP</span></div>
     </div>
 
-    <!-- STEP 1: 팀 선택 -->
+    <!-- STEP 1: 리그 및 팀 선택 -->
     <div id="step1" class="step active">
-        <h2>1. 응원하는 나의 구단을 골라주세요</h2>
-        <div class="team-grid" id="teamGrid"></div>
-        <button class="action-btn" id="btnGoToStep2" disabled style="background:#cbd5e1; cursor:not-allowed;">구단을 먼저 선택해주세요</button>
+        <h2>1. 플레이할 리그를 먼저 선택하세요</h2>
+        <div class="league-selection">
+            <button class="league-btn" id="btnKBO" onclick="selectLeague('KBO')">⚾ KBO 리그<br><span style="font-size:12px; font-weight:normal; color:#64748b;">10개 구단 (5매치 체제)</span></button>
+            <button class="league-btn" id="btnKLeague" onclick="selectLeague('KLEAGUE')">⚽ K리그1<br><span style="font-size:12px; font-weight:normal; color:#64748b;">12개 구단 (6매치 체제)</span></button>
+        </div>
+
+        <div id="teamSelectionArea" style="display:none;">
+            <h2>2. 응원하는 나의 구단을 골라주세요</h2>
+            <div class="team-grid" id="teamGrid"></div>
+            
+            <h2 style="margin-top: 30px;">3. 대진 구성 방식을 선택해주세요</h2>
+            <div class="mode-selection">
+                <button class="mode-btn" id="modeRandom" onclick="selectMode('random')">🎲 랜덤 대진 생성<br><span style="font-size:12px; font-weight:normal; color:#64748b;">시스템이 자동으로 라운드 대진을 구성합니다.</span></button>
+                <button class="mode-btn" id="modeManual" onclick="selectMode('manual')">🛠️ 직접 대진 배치<br><span style="font-size:12px; font-weight:normal; color:#64748b;">구단 매치업을 수동으로 빌드합니다.</span></button>
+            </div>
+        </div>
+
+        <button class="action-btn" id="btnGoToStep2" disabled style="background:#cbd5e1; cursor:not-allowed;">조건을 모두 선택해주세요</button>
     </div>
 
     <!-- STEP 2: 예측 및 배팅 -->
     <div id="step2" class="step">
-        <h2>2. 오늘의 5개 매치 승리팀 예측 및 배팅</h2>
-        <p style="color:#64748b; margin-bottom:20px; font-size:14px;">※ 각 매치에서 승리할 것 같은 팀을 클릭하고, 하단에 포인트를 배팅하세요.</p>
+        <h2 id="step2Title">승리팀 예측 및 배팅</h2>
+        <p style="color:#e11d48; margin-bottom:20px; font-size:14px; font-weight:bold;">⚠️ 올인 방지 경고: 0경기 적중 시 배팅금의 2배를 잃으므로, 최대 보유 포인트의 50%까지만 배팅 가능합니다.</p>
         
         <div id="matchesContainer"></div>
 
-        <div class="betting-section">
-            <label for="betAmount">배팅할 포인트를 입력하세요</label>
+        <div class="betting-section" id="bettingSection" style="display:none;">
+            <label for="betAmount">배팅할 포인트를 입력하세요 (최대 <span id="maxBetNotice">250</span> FP)</label>
             <div class="bet-input-container">
                 <input type="number" id="betAmount" min="1" value="100">
-                <button class="btn-max" id="btnMaxBet">MAX</button>
+                <button class="btn-max" id="btnMaxBet">MAX (50%)</button>
             </div>
             <button class="action-btn" id="btnSimulate">승부예측 결과 시뮬레이션 시작</button>
         </div>
+        <button class="action-btn" id="btnConfirmManualMatches" style="display:none;">대진표 수동 작성 완료</button>
     </div>
 
     <!-- STEP 3: 결과 출력 -->
@@ -352,66 +456,73 @@
     </div>
 </div>
 
+<!-- 수동 배치를 위한 팝업 모달 -->
+<div class="modal" id="teamModal">
+    <div class="modal-content">
+        <h3 id="modalTitle">팀을 선택하세요</h3>
+        <p style="font-size:13px; color:#64748b; margin-bottom:15px;">이미 다른 매치에 배치된 팀은 고를 수 없습니다.</p>
+        <div class="team-grid" id="modalTeamGrid"></div>
+        <button class="action-btn" style="background:#64748b;" onclick="closeModal()">취소</button>
+    </div>
+</div>
+
 <script>
-// 전반기 상대 전적 승률 데이터 데이터베이스화[cite: 1]
-const winRates = {
-    "삼성 라이온즈": {
-        "LG 트윈스": 54.5, "kt wiz": 44.4, "KIA 타이거즈": 55.6, "두산 베어스": 66.7,
-        "한화 이글스": 55.6, "NC 다이노스": 55.6, "롯데 자이언츠": 40.0, "SSG 랜더스": 88.9, "키움 히어로즈": 76.9
-    },
-    "LG 트윈스": {
-        "삼성 라이온즈": 45.5, "kt wiz": 55.6, "KIA 타이거즈": 63.6, "두산 베어스": 55.6,
-        "한화 이글스": 50.0, "NC 다이노스": 66.7, "롯데 자이언츠": 55.6, "SSG 랜더스": 88.9, "키움 히어로즈": 66.7
-    },
-    "kt wiz": {
-        "삼성 라이온즈": 55.6, "LG 트윈스": 44.4, "KIA 타이거즈": 44.4, "두산 베어스": 66.7,
-        "한화 이글스": 50.0, "NC 다이노스": 55.6, "롯데 자이언츠": 62.5, "SSG 랜더스": 66.7, "키움 히어로즈": 66.7
-    },
-    "KIA 타이거즈": {
-        "삼성 라이온즈": 44.4, "LG 트윈스": 36.4, "kt wiz": 55.6, "두산 베어스": 41.7,
-        "한화 이글스": 50.0, "NC 다이노스": 55.6, "롯데 자이언츠": 37.5, "SSG 랜더스": 66.7, "키움 히어로즈": 100.0
-    },
-    "두산 베어스": {
-        "삼성 라이온즈": 33.3, "LG 트윈스": 44.4, "kt wiz": 33.3, "KIA 타이거즈": 58.3,
-        "한화 이글스": 55.6, "NC 다이노스": 50.0, "롯데 자이언츠": 66.7, "SSG 랜더스": 55.6, "키움 히어로즈": 63.6
-    },
-    "한화 이글스": {
-        "삼성 라이온즈": 44.4, "LG 트윈스": 50.0, "kt wiz": 50.0, "KIA 타이거즈": 50.0,
-        "두산 베어스": 44.4, "NC 다이노스": 55.6, "롯데 자이언츠": 62.5, "SSG 랜더스": 41.7, "키움 히어로즈": 54.5
-    },
-    "NC 다이노스": {
-        "삼성 라이온즈": 44.4, "LG 트윈스": 33.3, "kt wiz": 44.4, "KIA 타이거즈": 44.4,
-        "두산 베어스": 50.0, "한화 이글스": 44.4, "롯데 자이언츠": 55.6, "SSG 랜더스": 66.7, "키움 히어로즈": 50.0
-    },
-    "롯데 자이언츠": {
-        "삼성 라이온즈": 60.0, "LG 트윈스": 44.4, "kt wiz": 37.5, "KIA 타이거즈": 62.5,
-        "두산 베어스": 33.3, "한화 이글스": 37.5, "NC 다이노스": 44.4, "SSG 랜더스": 60.0, "키움 히어로즈": 58.3
-    },
-    "SSG 랜더스": {
-        "삼성 라이온즈": 11.1, "LG 트윈스": 11.1, "kt wiz": 33.3, "KIA 타이거즈": 33.3,
-        "두산 베어스": 44.4, "한화 이글스": 58.3, "NC 다이노스": 33.3, "롯데 자이언츠": 40.0, "키움 히어로즈": 50.0
-    },
-    "키움 히어로즈": {
-        "삼성 라이온즈": 23.1, "LG 트윈스": 33.3, "kt wiz": 33.3, "KIA 타이거즈": 0.0,
-        "두산 베어스": 36.4, "한화 이글스": 45.5, "NC 다이노스": 50.0, "롯데 자이언츠": 41.7, "SSG 랜더스": 50.0
-    }
+// 데이터 세트 (KBO 10개 구단 및 K리그 12개 구단 상성 정보)
+const kboWinRates = {
+    "LG 트윈스": {"KT 위즈":53, "SSG 랜더스":52, "NC 다이노스":54, "두산 베어스":51, "KIA 타이거즈":46, "롯데 자이언츠":55, "삼성 라이온즈":52, "한화 이글스":56, "키움 히어로즈":58},
+    "KT 위즈": {"LG 트윈스":47, "SSG 랜더스":51, "NC 다이노스":52, "두산 베어스":50, "KIA 타이거즈":45, "롯데 자이언츠":53, "삼성 라이온즈":51, "한화 이글스":54, "키움 히어로즈":56},
+    "SSG 랜더스": {"LG 트윈스":48, "KT 위즈":49, "NC 다이노스":51, "두산 베어스":49, "KIA 타이거즈":44, "롯데 자이언츠":52, "삼성 라이온즈":50, "한화 이글스":53, "키움 히어로즈":55},
+    "NC 다이노스": {"LG 트윈스":46, "KT 위즈":48, "SSG 랜더스":49, "두산 베어스":48, "KIA 타이거즈":43, "롯데 자이언츠":51, "삼성 라이온즈":49, "한화 이글스":52, "키움 히어로즈":54},
+    "두산 베어스": {"LG 트윈스":49, "KT 위즈":50, "SSG 랜더스":51, "NC 다이노스":52, "KIA 타이거즈":46, "롯데 자이언츠":53, "삼성 라이온즈":52, "한화 이글스":55, "키움 히어로즈":57},
+    "KIA 타이거즈": {"LG 트윈스":54, "KT 위즈":55, "SSG 랜더스":56, "NC 다이노스":57, "두산 베어스":54, "롯데 자이언츠":58, "삼성 라이온즈":56, "한화 이글스":60, "키움 히어로즈":62},
+    "롯데 자이언츠": {"LG 트윈스":45, "KT 위즈":47, "SSG 랜더스":48, "NC 다이노스":49, "두산 베어스":47, "KIA 타이거즈":42, "삼성 라이온즈":48, "한화 이글스":51, "키움 히어로즈":53},
+    "삼성 라이온즈": {"LG 트윈스":48, "KT 위즈":49, "SSG 랜더스":50, "NC 다이노스":51, "두산 베어스":48, "KIA 타이거즈":44, "롯데 자이언츠":52, "한화 이글스":54, "키움 히어로즈":56},
+    "한화 이글스": {"LG 트윈스":44, "KT 위즈":46, "SSG 랜더스":47, "NC 다이노스":48, "두산 베어스":45, "KIA 타이거즈":40, "롯데 자이언츠":49, "삼성 라이온즈":46, "키움 히어로즈":52},
+    "키움 히어로즈": {"LG 트윈스":42, "KT 위즈":44, "SSG 랜더스":45, "NC 다이노스":46, "두산 베어스":43, "KIA 타이거즈":38, "롯데 자이언츠":47, "삼성 라이온즈":44, "한화 이글스":48}
 };
 
-const teams = Object.keys(winRates);
+const kleagueWinRates = {
+    "울산 HD FC": { "김천 상무":53, "전북 현대":55, "포항 스틸러스":51, "광주 FC":49, "강원 FC":52, "FC 서울":54, "수원 FC":56, "인천 유나이티드":58, "제주 유나이티드":62, "대전 하나":57, "대구 FC":62 },
+    "김천 상무 FC": { "울산 HD":47, "전북 현대":51, "포항 스틸러스":48, "광주 FC":48, "강원 FC":46, "FC 서울":49, "수원 FC":53, "인천 유나이티드":54, "제주 유나이티드":58, "대전 하나":55, "대구 FC":57 },
+    "전북 현대 모터스": { "울산 HD":45, "김천 상무":49, "포항 스틸러스":47, "광주 FC":50, "강원 FC":46, "FC 서울":50, "수원 FC":52, "인천 유나이티드":53, "제주 유나이티드":56, "대전 하나":52, "대구 FC":55 },
+    "포항 스틸러스": { "울산 HD":49, "김천 상무":52, "전북 현대":53, "광주 FC":45, "강원 FC":50, "FC 서울":52, "수원 FC":55, "인천 유나이티드":56, "제주 유나이티드":60, "대전 하나":58, "대구 FC":58 },
+    "광주 FC": { "울산 HD":51, "김천 상무":52, "전북 현대":50, "포항 스틸러스":55, "강원 FC":47, "FC 서울":48, "수원 FC":54, "인천 유나이티드":52, "제주 유나이티드":56, "대전 하나":55, "대구 FC":54 },
+    "강원 FC": { "울산 HD":48, "김천 상무":54, "전북 현대":54, "포항 스틸러스":50, "광주 FC":53, "FC 서울":51, "수원 FC":56, "인천 유나이티드":57, "제주 유나이티드":60, "대전 하나":58, "대구 FC":56 },
+    "FC 서울": { "울산 HD":46, "김천 상무":51, "전북 현대":50, "포항 스틸러스":48, "광주 FC":52, "강원 FC":49, "수원 FC":54, "인천 유나이티드":56, "제주 유나이티드":58, "대전 하나":54, "대구 FC":55 },
+    "수원 FC": { "울산 HD":44, "김천 상무":47, "전북 현대":48, "포항 스틸러스":45, "광주 FC":46, "강원 FC":44, "FC 서울":46, "인천 유나이티드":50, "제주 유나이티드":52, "대전 하나":51, "대구 FC":52 },
+    "인천 유나이티드": { "울산 HD":42, "김천 상무":46, "전북 현대":47, "포항 스틸러스":44, "광주 FC":48, "강원 FC":43, "FC 서울":44, "수원 FC":50, "제주 유나이티드":52, "대전 하나":49, "대구 FC":50 },
+    "제주 유나이티드": { "울산 HD":38, "김천 상무":42, "전북 현대":44, "포항 스틸러스":40, "광주 FC":44, "강원 FC":40, "FC 서울":42, "수원 FC":48, "인천 유나이티드":48, "대전 하나":50, "대구 FC":48 },
+    "대전 하나시티즌": { "울산 HD":43, "김천 상무":45, "전북 현대":48, "포항 스틸러스":42, "광주 FC":45, "강원 FC":42, "FC 서울":46, "수원 FC":49, "인천 유나이티드":51, "제주 유나이티드":50, "대구 FC":51 },
+    "대구 FC": { "울산 HD":38, "김천 상무":43, "전북 현대":45, "포항 스틸러스":42, "광주 FC":46, "강원 FC":44, "FC 서울":45, "수원 FC":48, "인천 유나이티드":50, "제주 유나이티드":52, "대전 하나":49 }
+};
 
-// 게임 상태 관리 변수[cite: 1]
+let selectedLeague = ""; // "KBO" or "KLEAGUE"
+let currentTeams = [];
+let currentWinRates = {};
+let matchCount = 0; // KBO=5, K리그=6
+
 let userTeam = "";
+let matchMode = ""; 
 let userPoints = 500;
 let currentMatches = [];
 let userPredictions = [];
 
-// DOM 요소
+let manualSlots = [];
+let activeSlotIndex = null;
+let activeTeamSide = null;
+
+// UI 요소
+const mainTitle = document.getElementById('mainTitle');
 const teamGrid = document.getElementById('teamGrid');
 const btnGoToStep2 = document.getElementById('btnGoToStep2');
+const statusBarLeague = document.getElementById('statusBarLeague');
 const statusBarTeam = document.getElementById('statusBarTeam');
 const statusBarPoints = document.getElementById('statusBarPoints');
 const matchesContainer = document.getElementById('matchesContainer');
+const bettingSection = document.getElementById('bettingSection');
+const btnConfirmManualMatches = document.getElementById('btnConfirmManualMatches');
 const betAmountInput = document.getElementById('betAmount');
+const maxBetNotice = document.getElementById('maxBetNotice');
 const btnMaxBet = document.getElementById('btnMaxBet');
 const btnSimulate = document.getElementById('btnSimulate');
 const resultsContainer = document.getElementById('resultsContainer');
@@ -419,10 +530,44 @@ const resultHitCount = document.getElementById('resultHitCount');
 const resultBonusInfo = document.getElementById('resultBonusInfo');
 const resultPayout = document.getElementById('resultPayout');
 
-// 초기화: 팀 선택 그리드 생성
+function selectLeague(league) {
+    selectedLeague = league;
+    document.getElementById('btnKBO').classList.remove('selected');
+    document.getElementById('btnKLeague').classList.remove('selected');
+    
+    // 글로벌 스타일 테마 설정 반영 및 데이터 지정
+    if(league === 'KBO') {
+        document.getElementById('btnKBO').classList.add('selected');
+        document.documentElement.style.setProperty('--primary', 'var(--kbo-color)');
+        mainTitle.textContent = "⚾ 2026 KBO 리그 승부예측 시뮬레이터";
+        currentWinRates = kboWinRates;
+        matchCount = 5;
+    } else {
+        document.getElementById('btnKLeague').classList.add('selected');
+        document.documentElement.style.setProperty('--primary', 'var(--kleague-color)');
+        mainTitle.textContent = "⚽ 2026 K리그1 승부예측 시뮬레이터";
+        currentWinRates = kleagueWinRates;
+        matchCount = 6;
+    }
+    
+    currentTeams = Object.keys(currentWinRates);
+    statusBarLeague.textContent = league;
+    
+    // 초기화 및 팀 선택 활성화
+    userTeam = "";
+    matchMode = "";
+    statusBarTeam.textContent = "선택 안 됨";
+    document.getElementById('modeRandom').classList.remove('selected');
+    document.getElementById('modeManual').classList.remove('selected');
+    
+    document.getElementById('teamSelectionArea').style.display = 'block';
+    initTeamSelection();
+    checkStep1Validity();
+}
+
 function initTeamSelection() {
     teamGrid.innerHTML = "";
-    teams.forEach(team => {
+    currentTeams.forEach(team => {
         const btn = document.createElement('button');
         btn.className = 'team-btn';
         btn.textContent = team;
@@ -436,62 +581,190 @@ function selectTeam(team, element) {
     element.classList.add('selected');
     userTeam = team;
     statusBarTeam.textContent = team;
-    
-    btnGoToStep2.disabled = false;
-    btnGoToStep2.style.background = "var(--primary)";
-    btnGoToStep2.style.cursor = "pointer";
-    btnGoToStep2.textContent = `${team} 선택 완료 - 대진 생성하기`;
+    checkStep1Validity();
 }
 
-// 스텝 전환 함수
+function selectMode(mode) {
+    document.getElementById('modeRandom').classList.remove('selected');
+    document.getElementById('modeManual').classList.remove('selected');
+    
+    if(mode === 'random') document.getElementById('modeRandom').classList.add('selected');
+    if(mode === 'manual') document.getElementById('modeManual').classList.add('selected');
+    
+    matchMode = mode;
+    checkStep1Validity();
+}
+
+function checkStep1Validity() {
+    if (selectedLeague && userTeam && matchMode) {
+        btnGoToStep2.disabled = false;
+        btnGoToStep2.style.background = "var(--primary)";
+        btnGoToStep2.style.cursor = "pointer";
+        btnGoToStep2.textContent = "다음 단계로 이동하기";
+    } else {
+        btnGoToStep2.disabled = true;
+        btnGoToStep2.style.background = "#cbd5e1";
+        btnGoToStep2.style.cursor = "not-allowed";
+        btnGoToStep2.textContent = "조건을 모두 선택해주세요";
+    }
+}
+
 function showStep(stepNum) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     document.getElementById(`step${stepNum}`).classList.add('active');
     window.scrollTo(0, 0);
 }
 
-// 10개 팀 랜덤 대진 생성 (중복 없이 5개 조 구성)[cite: 1]
-function generateMatches() {
-    let pool = [...teams];
+btnGoToStep2.onclick = () => {
+    showStep(2);
+    // 예측 버튼 커스텀 컬러 주입
+    const cssStyle = document.createElement('style');
+    if(selectedLeague === 'KBO') {
+        cssStyle.innerHTML = `.predict-btn.selected { background: #e0f2fe !important; border-color: #0284c7 !important; color: #0369a1 !important; }`;
+    } else {
+        cssStyle.innerHTML = `.predict-btn.selected { background: #d1fae5 !important; border-color: #10b981 !important; color: #065f46 !important; }`;
+    }
+    document.head.appendChild(cssStyle);
+
+    if (matchMode === 'random') {
+        document.getElementById('step2Title').textContent = `2. 오늘의 ${matchCount}개 매치 승리팀 예측 및 배팅`;
+        bettingSection.style.display = 'block';
+        btnConfirmManualMatches.style.display = 'none';
+        generateRandomMatches();
+    } else {
+        document.getElementById('step2Title').textContent = `2. 원하는대로 ${matchCount}개 대진표를 구성해 주세요`;
+        bettingSection.style.display = 'none';
+        btnConfirmManualMatches.style.display = 'block';
+        initManualSetupUI();
+    }
+};
+
+function generateRandomMatches() {
+    let pool = [...currentTeams];
     for (let i = pool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     
     currentMatches = [];
-    userPredictions = new Array(5).fill(null);
+    userPredictions = new Array(matchCount).fill(null);
     
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < matchCount; i++) {
         const teamA = pool[i * 2];
         const teamB = pool[i * 2 + 1];
         
-        let rateA = winRates[teamA][teamB];
-        let rateB = winRates[teamB][teamA];
+        let rateA = currentWinRates[teamA][teamB] || 50;
+        let rateB = 100 - rateA;
         
         currentMatches.push({ teamA, teamB, rateA, rateB });
     }
     
+    maxBetNotice.textContent = Math.floor(userPoints / 2);
     renderMatches();
 }
 
-// 대진 카드 렌더링
+function initManualSetupUI() {
+    manualSlots = Array.from({ length: matchCount }, () => ({ teamA: null, teamB: null }));
+    renderManualSetupSlots();
+}
+
+function renderManualSetupSlots() {
+    matchesContainer.innerHTML = "";
+    manualSlots.forEach((slot, index) => {
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        card.innerHTML = `
+            <div class="match-title">MATCH 0${index + 1} 구성</div>
+            <div class="match-teams">
+                <button class="setup-btn" onclick="openTeamModal(${index}, 'A')">
+                    ${slot.teamA ? slot.teamA : '<span style="color:#94a3b8; font-weight:normal;">팀 선택</span>'}
+                </button>
+                <span class="vs-text">VS</span>
+                <button class="setup-btn" onclick="openTeamModal(${index}, 'B')">
+                    ${slot.teamB ? slot.teamB : '<span style="color:#94a3b8; font-weight:normal;">팀 선택</span>'}
+                </button>
+            </div>
+        `;
+        matchesContainer.appendChild(card);
+    });
+}
+
+function openTeamModal(slotIndex, side) {
+    activeSlotIndex = slotIndex;
+    activeTeamSide = side;
+    document.getElementById('modalTitle').textContent = `MATCH 0${slotIndex + 1}의 ${side === 'A' ? '홈' : '원정'} 팀 선택`;
+    
+    let selectedTeams = [];
+    manualSlots.forEach(s => {
+        if(s.teamA) selectedTeams.push(s.teamA);
+        if(s.teamB) selectedTeams.push(s.teamB);
+    });
+
+    const modalGrid = document.getElementById('modalTeamGrid');
+    modalGrid.innerHTML = "";
+    
+    currentTeams.forEach(team => {
+        const btn = document.createElement('button');
+        btn.className = 'team-btn';
+        btn.textContent = team;
+        
+        if (selectedTeams.includes(team) && manualSlots[slotIndex][side === 'A' ? 'teamA' : 'teamB'] !== team) {
+            btn.disabled = true;
+        }
+        
+        btn.onclick = () => {
+            manualSlots[slotIndex][side === 'A' ? 'teamA' : 'teamB'] = team;
+            closeModal();
+            renderManualSetupSlots();
+        };
+        modalGrid.appendChild(btn);
+    });
+    
+    document.getElementById('teamModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('teamModal').style.display = 'none';
+}
+
+btnConfirmManualMatches.onclick = () => {
+    for(let i=0; i<matchCount; i++) {
+        if(!manualSlots[i].teamA || !manualSlots[i].teamB) {
+            alert(`아직 배치되지 않은 구단이 있습니다! ${matchCount}개 매치를 완벽히 채워주세요.`);
+            return;
+        }
+    }
+    
+    currentMatches = manualSlots.map(slot => {
+        let rateA = currentWinRates[slot.teamA][slot.teamB] || currentWinRates[slot.teamA][Object.keys(currentWinRates[slot.teamA])[0]] || 50;
+        let rateB = 100 - rateA;
+        return { teamA: slot.teamA, teamB: slot.teamB, rateA, rateB };
+    });
+    
+    userPredictions = new Array(matchCount).fill(null);
+    
+    document.getElementById('step2Title').textContent = "2. 작성한 대진표의 승리팀 예측 및 배팅";
+    btnConfirmManualMatches.style.display = 'none';
+    bettingSection.style.display = 'block';
+    
+    renderMatches();
+    maxBetNotice.textContent = Math.floor(userPoints / 2);
+};
+
 function renderMatches() {
     matchesContainer.innerHTML = "";
     currentMatches.forEach((match, index) => {
         const card = document.createElement('div');
         card.className = 'match-card';
-        
         card.innerHTML = `
             <div class="match-title">MATCH 0${index + 1}</div>
             <div class="match-teams">
                 <button class="predict-btn" id="match-${index}-0" onclick="selectPrediction(${index}, 0)">
                     <span>${match.teamA}</span>
-                    <sub>승률 ${match.rateA}%</sub>
                 </button>
                 <span class="vs-text">VS</span>
                 <button class="predict-btn" id="match-${index}-1" onclick="selectPrediction(${index}, 1)">
                     <span>${match.teamB}</span>
-                    <sub>승률 ${match.rateB}%</sub>
                 </button>
             </div>
         `;
@@ -506,40 +779,37 @@ function selectPrediction(matchIndex, teamIndex) {
     document.getElementById(`match-${matchIndex}-${teamIndex}`).classList.add('selected');
 }
 
-btnGoToStep2.onclick = () => {
-    generateMatches();
-    showStep(2);
-};
-
 btnMaxBet.onclick = () => {
-    betAmountInput.value = userPoints;
+    betAmountInput.value = Math.floor(userPoints / 2);
 };
 
 btnSimulate.onclick = () => {
     if (userPredictions.includes(null)) {
-        alert("모든 5개 매치의 우승팀을 예측해주세요!");
+        alert(`모든 ${matchCount}개 매치의 우승팀을 예측해주세요!`);
         return;
     }
     
     const betAmount = parseInt(betAmountInput.value);
+    const maxAllowedBet = Math.floor(userPoints / 2);
+    
     if (isNaN(betAmount) || betAmount <= 0) {
         alert("올바른 배팅 금액을 입력해주세요.");
         return;
     }
-    if (betAmount > userPoints) {
-        alert("보유하고 있는 포인트보다 많이 배팅할 수 없습니다!");
+    if (betAmount > maxAllowedBet) {
+        alert(`파산 방지를 위해 보유 포인트의 절반(${maxAllowedBet} FP) 까지만 배팅이 가능합니다!`);
+        betAmountInput.value = maxAllowedBet;
         return;
     }
 
     runSimulation(betAmount);
 };
 
-// AI 시뮬레이션 및 결과 정산[cite: 1]
 function runSimulation(betAmount) {
     resultsContainer.innerHTML = "";
     let matchHits = 0;
-    let myTeamWon = false; // 응원팀 승리 여부 플래그
-    let myTeamPlayed = false; // 응원팀이 대진에 있었는지 여부
+    let myTeamWon = false;
+    let myTeamPlayed = false;
     
     currentMatches.forEach((match, index) => {
         const rand = Math.random() * 100;
@@ -551,7 +821,6 @@ function runSimulation(betAmount) {
         
         if (isHit) matchHits++;
         
-        // 내 응원팀 경기 결과 감지
         if (match.teamA === userTeam || match.teamB === userTeam) {
             myTeamPlayed = true;
             if (winnerTeam === userTeam) {
@@ -565,34 +834,48 @@ function runSimulation(betAmount) {
             <div class="match-title">MATCH 0${index + 1} 결과</div>
             <div style="font-size: 18px; font-weight: bold; display:flex; justify-content:space-between;">
                 <span>${match.teamA} VS ${match.teamB}</span>
-                <span style="color: ${isHit ? '#22c55e' : '#ef4444'}">${isHit ? '🎯 예측 성공' : '❌ 예측 실패'}</span>
+                <span style="color: ${isHit ? '#10b981' : '#ef4444'}">${isHit ? '🎯 예측 성공' : '❌ 예측 실패'}</span>
             </div>
             <div class="result-meta">
                 <div><span class="badge user">내 선택</span> ${userPickedTeam}</div>
-                <div><span class="badge ai">실제 승리팀</span> <strong>${winnerTeam}</strong> (확률: ${winnerIndex === 0 ? match.rateA : match.rateB}%)</div>
+                <div><span class="badge ai">실제 승리팀</span> <strong>${winnerTeam}</strong></div>
+                <div style="color: #64748b; font-size: 13px; margin-top:3px;">
+                    💡 기반 확률 데이터: ${match.teamA} (${match.rateA}%) vs ${match.teamB} (${match.rateB}%)
+                </div>
             </div>
         `;
         resultsContainer.appendChild(resCard);
     });
 
-    // 기본 배팅금액 정산[cite: 1]
-    let hitPercent = (matchHits / 5) * 100;
+    let hitPercent = Math.floor((matchHits / matchCount) * 100);
     let pointChange = 0;
 
-    switch(matchHits) {
-        case 0: pointChange = -betAmount * 2; break;
-        case 1: pointChange = -betAmount * 1; break;
-        case 2: pointChange = -betAmount * 0.5; break;
-        case 3: pointChange = betAmount * 0.5; break;
-        case 4: pointChange = betAmount * 1; break;
-        case 5: pointChange = betAmount * 2; break;
+    // KBO와 K리그 정산 구조 동적 매핑
+    if (selectedLeague === 'KBO') {
+        switch(matchHits) {
+            case 0: pointChange = -betAmount * 2; break;
+            case 1: pointChange = -betAmount * 1; break;
+            case 2: pointChange = -betAmount * 0.5; break;
+            case 3: pointChange = betAmount * 0.5; break;
+            case 4: pointChange = betAmount * 1; break;
+            case 5: pointChange = betAmount * 2; break;
+        }
+    } else { // K리그 (6경기)
+        switch(matchHits) {
+            case 0: pointChange = -betAmount * 2; break;
+            case 1: pointChange = -betAmount * 1; break;
+            case 2: pointChange = -betAmount * 0.5; break;
+            case 3: pointChange = 0; break; 
+            case 4: pointChange = betAmount * 0.5; break;
+            case 5: pointChange = betAmount * 1; break;
+            case 6: pointChange = betAmount * 2.5; break; 
+        }
     }
 
-    // 내 응원팀 승리 보너스 정산 (+100 포인트)
     let bonusPoint = 0;
     if (myTeamPlayed && myTeamWon) {
         bonusPoint = 100;
-        resultBonusInfo.style.color = "#22c55e";
+        resultBonusInfo.style.color = "#10b981";
         resultBonusInfo.textContent = `🎉 [보너스] 내가 응원하는 팀(${userTeam})이 경기에서 승리하여 +100 FP가 추가 지급됩니다!`;
     } else if (myTeamPlayed && !myTeamWon) {
         resultBonusInfo.style.color = "#ef4444";
@@ -601,14 +884,12 @@ function runSimulation(betAmount) {
         resultBonusInfo.textContent = "";
     }
 
-    // 최종 합산 계산
     let totalChange = pointChange + bonusPoint;
     userPoints += totalChange;
     if (userPoints < 0) userPoints = 0;
     
-    // UI 업데이트
     statusBarPoints.textContent = `${userPoints} FP`;
-    resultHitCount.innerHTML = `총 5경기 중 <strong>${matchHits}경기</strong>를 맞췄습니다! (적중률 ${hitPercent}%)`;
+    resultHitCount.innerHTML = `총 ${matchCount}경기 중 <strong>${matchHits}경기</strong>를 맞췄습니다! (적중률 ${hitPercent}%)`;
     
     if (totalChange >= 0) {
         resultPayout.innerHTML = `최종 결과: <span class="payout-plus">+${totalChange} FP 변동 (기본: ${pointChange >= 0 ? '+' : ''}${pointChange} / 보너스: +${bonusPoint})</span>`;
@@ -623,19 +904,23 @@ function runSimulation(betAmount) {
     showStep(3);
 }
 
-// 다시 시작 버튼 (다음 라운드 진행)
 document.getElementById('btnRestart').onclick = () => {
     if (userPoints <= 0) {
         userPoints = 100;
         statusBarPoints.textContent = `${userPoints} FP`;
     }
-    betAmountInput.value = Math.min(100, userPoints);
-    generateMatches();
-    showStep(2);
+    // 리그 선택부터 다시 시작하도록 초기화 후 첫 스텝 이동
+    document.getElementById('teamSelectionArea').style.display = 'none';
+    document.getElementById('btnKBO').classList.remove('selected');
+    document.getElementById('btnKLeague').classList.remove('selected');
+    selectedLeague = "";
+    userTeam = "";
+    matchMode = "";
+    statusBarLeague.textContent = "선택 안 됨";
+    statusBarTeam.textContent = "선택 안 됨";
+    checkStep1Validity();
+    showStep(1);
 };
-
-// 최초 실행
-initTeamSelection();
 </script>
 
 </body>
